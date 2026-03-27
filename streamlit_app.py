@@ -3,139 +3,135 @@ import requests
 import pandas as pd
 import json
 from datetime import datetime, timedelta
-import html
 
 # ========== 页面配置 ==========
 st.set_page_config(
-    page_title="OpenStock 📈 - 开源股票追踪",
+    page_title="OpenStock - 开源股票追踪",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ========== CSS 样式 ==========
+# ========== 深色主题 CSS ==========
 st.markdown("""
 <style>
-    /* 全局样式 */
+    /* 全局深色背景 */
     .stApp {
-        background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+        background: #0a0a0a;
     }
     
-    /* 主标题 */
+    /* 主标题 - 渐变效果 */
     .main-title {
-        font-size: 2.8rem;
+        font-size: 2.5rem;
         font-weight: 800;
         background: linear-gradient(135deg, #00d4aa 0%, #00a8e8 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        background-clip: text;
         text-align: center;
         margin-bottom: 0.5rem;
     }
     
     .subtitle {
         text-align: center;
-        color: #8b949e;
-        font-size: 1rem;
+        color: #6b7280;
+        font-size: 0.95rem;
         margin-bottom: 2rem;
     }
     
-    /* 价格样式 */
-    .price-container {
-        text-align: center;
-        padding: 1.5rem;
-        background: rgba(22, 27, 34, 0.8);
-        border-radius: 16px;
-        border: 1px solid rgba(48, 54, 61, 0.8);
+    /* 卡片样式 - 玻璃拟态 */
+    .glass-card {
+        background: rgba(17, 24, 39, 0.7);
+        border: 1px solid rgba(55, 65, 81, 0.5);
+        border-radius: 12px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
     }
     
+    /* 价格样式 */
     .price-large {
-        font-size: 3rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        color: #f0f6fc;
+        color: #f9fafb;
     }
     
     .price-up {
-        color: #3fb950;
+        color: #10b981;
         font-weight: 600;
     }
     
     .price-down {
-        color: #f85149;
+        color: #ef4444;
         font-weight: 600;
     }
     
-    /* 卡片样式 */
-    .stock-card {
-        background: rgba(22, 27, 34, 0.6);
-        border: 1px solid rgba(48, 54, 61, 0.6);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        transition: all 0.3s ease;
-    }
-    
-    .stock-card:hover {
-        border-color: rgba(48, 54, 61, 1);
-        transform: translateY(-2px);
-    }
-    
-    /* 指标卡片 */
-    .metric-box {
-        background: linear-gradient(135deg, rgba(0, 212, 170, 0.1) 0%, rgba(0, 168, 232, 0.1) 100%);
-        border: 1px solid rgba(0, 212, 170, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
-        text-align: center;
-    }
-    
-    /* 侧边栏样式 */
+    /* 侧边栏 */
     .sidebar-header {
-        font-size: 1.2rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: #f0f6fc;
-        margin-bottom: 1rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 1.5rem 0 0.75rem 0;
         padding-bottom: 0.5rem;
-        border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+        border-bottom: 1px solid rgba(55, 65, 81, 0.5);
     }
+    
+    /* 股票标签 */
+    .stock-chip {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(31, 41, 55, 0.8);
+        border: 1px solid rgba(75, 85, 99, 0.5);
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
+        margin: 0.25rem;
+        font-size: 0.875rem;
+        color: #e5e7eb;
+        transition: all 0.2s;
+    }
+    
+    .stock-chip:hover {
+        background: rgba(55, 65, 81, 0.8);
+        border-color: rgba(107, 114, 128, 0.5);
+    }
+    
+    /* TradingView 容器 */
+    .tv-container {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(55, 65, 81, 0.5);
+        background: rgba(17, 24, 39, 0.5);
+    }
+    
+    /* 隐藏 Streamlit 默认元素 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
     /* 按钮样式 */
     .stButton > button {
         border-radius: 8px !important;
         font-weight: 500 !important;
+        transition: all 0.2s !important;
     }
     
-    /* 表格样式 */
-    .dataframe {
-        font-size: 0.9rem !important;
-    }
-    
-    /* 新闻卡片 */
-    .news-card {
-        background: rgba(22, 27, 34, 0.6);
-        border-left: 3px solid #00d4aa;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 0 8px 8px 0;
-    }
-    
-    /* TradingView 容器 */
-    .tradingview-container {
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(48, 54, 61, 0.6);
+    /* 分隔线 */
+    hr {
+        border-color: rgba(55, 65, 81, 0.5) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ========== 初始化 Session State ==========
+# ========== Session State 初始化 ==========
 def init_session():
     defaults = {
-        'watchlist': ['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'TSLA'],
+        'watchlist': ['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META'],
         'alerts': [],
         'selected_symbol': 'AAPL',
-        'search_results': [],
         'market_tab': 'overview',
-        'chart_type': 'candle'
+        'chart_type': 'candle',
+        'sort_order': None,  # None, 'asc', 'desc'
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -147,10 +143,9 @@ init_session()
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 
-# ========== 缓存函数 ==========
+# ========== 数据获取函数 ==========
 @st.cache_data(ttl=60)
 def get_stock_quote(symbol):
-    """获取股票实时报价"""
     if not FINNHUB_API_KEY:
         return None
     try:
@@ -163,7 +158,6 @@ def get_stock_quote(symbol):
 
 @st.cache_data(ttl=300)
 def search_stocks(query):
-    """搜索股票"""
     if not FINNHUB_API_KEY or not query:
         return []
     try:
@@ -178,7 +172,6 @@ def search_stocks(query):
 
 @st.cache_data(ttl=600)
 def get_company_profile(symbol):
-    """获取公司信息"""
     if not FINNHUB_API_KEY:
         return None
     try:
@@ -191,7 +184,6 @@ def get_company_profile(symbol):
 
 @st.cache_data(ttl=300)
 def get_market_news(category="general"):
-    """获取市场新闻"""
     if not FINNHUB_API_KEY:
         return []
     try:
@@ -204,7 +196,6 @@ def get_market_news(category="general"):
 
 @st.cache_data(ttl=300)
 def get_company_news(symbol, from_date=None, to_date=None):
-    """获取公司新闻"""
     if not FINNHUB_API_KEY:
         return []
     if not from_date:
@@ -213,12 +204,7 @@ def get_company_news(symbol, from_date=None, to_date=None):
         to_date = datetime.now().strftime('%Y-%m-%d')
     try:
         url = f"{FINNHUB_BASE_URL}/company-news"
-        params = {
-            "symbol": symbol,
-            "from": from_date,
-            "to": to_date,
-            "token": FINNHUB_API_KEY
-        }
+        params = {"symbol": symbol, "from": from_date, "to": to_date, "token": FINNHUB_API_KEY}
         response = requests.get(url, params=params, timeout=10)
         return response.json()[:10] if response.status_code == 200 else []
     except:
@@ -226,7 +212,6 @@ def get_company_news(symbol, from_date=None, to_date=None):
 
 @st.cache_data(ttl=600)
 def get_basic_financials(symbol):
-    """获取基本财务数据"""
     if not FINNHUB_API_KEY:
         return None
     try:
@@ -239,13 +224,7 @@ def get_basic_financials(symbol):
 
 @st.cache_data(ttl=60)
 def get_market_indices():
-    """获取主要市场指数"""
-    indices = {
-        '^GSPC': '标普500',
-        '^DJI': '道琼斯',
-        '^IXIC': '纳斯达克',
-        '^RUT': '罗素2000'
-    }
+    indices = {'^GSPC': '标普500', '^DJI': '道琼斯', '^IXIC': '纳斯达克'}
     results = {}
     for symbol, name in indices.items():
         quote = get_stock_quote(symbol)
@@ -253,44 +232,34 @@ def get_market_indices():
             results[name] = quote
     return results
 
-@st.cache_data(ttl=3600)
-def get_stock_peers(symbol):
-    """获取同行业股票"""
-    if not FINNHUB_API_KEY:
-        return []
-    try:
-        url = f"{FINNHUB_BASE_URL}/stock/peers"
-        params = {"symbol": symbol, "token": FINNHUB_API_KEY}
-        response = requests.get(url, params=params, timeout=10)
-        return response.json()[:5] if response.status_code == 200 else []
-    except:
-        return []
-
 # ========== TradingView 组件 ==========
-def tradingview_widget(widget_type, symbol="", height=400):
-    """嵌入 TradingView 组件"""
-    
+def format_symbol_for_tv(symbol):
+    """转换股票代码为 TradingView 格式"""
     tv_symbol = symbol.upper()
     if ':' not in tv_symbol:
-        # 自动添加交易所前缀
-        if tv_symbol in ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'NFLX', 'TSLA']:
+        nasdaq_stocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'NFLX', 'TSLA', 'AMD', 'INTC', 'PYPL', 'ADBE', 'CSCO', 'CMCSA', 'PEP', 'AVGO', 'QCOM', 'TXN', 'TMUS', 'AMGN', 'SBUX', 'INTU', 'BKNG', 'ISRG', 'GILD', 'MDLZ', 'VRTX', 'ADP', 'FISV', 'CSX']
+        if tv_symbol in nasdaq_stocks:
             tv_symbol = f"NASDAQ:{tv_symbol}"
         else:
             tv_symbol = f"NYSE:{tv_symbol}"
+    return tv_symbol
+
+def tradingview_widget(widget_type, symbol="", height=400):
+    tv_symbol = format_symbol_for_tv(symbol) if symbol else ""
     
-    widgets = {
-        'overview': {
+    configs = {
+        'market_overview': {
             'script': 'market-overview',
             'config': '''{
                 "colorTheme": "dark",
                 "dateRange": "12M",
-                "locale": "zh_CN",
+                "locale": "en",
                 "largeChartUrl": "",
                 "isTransparent": true,
                 "showFloatingTooltip": true,
                 "tabs": [
                     {
-                        "title": "科技",
+                        "title": "Technology",
                         "symbols": [
                             {"s": "NASDAQ:AAPL", "d": "Apple"},
                             {"s": "NASDAQ:MSFT", "d": "Microsoft"},
@@ -301,22 +270,23 @@ def tradingview_widget(widget_type, symbol="", height=400):
                         ]
                     },
                     {
-                        "title": "金融",
+                        "title": "Financial",
                         "symbols": [
                             {"s": "NYSE:JPM", "d": "JPMorgan"},
                             {"s": "NYSE:BAC", "d": "Bank of America"},
+                            {"s": "NYSE:WFC", "d": "Wells Fargo"},
                             {"s": "NYSE:V", "d": "Visa"},
                             {"s": "NYSE:MA", "d": "Mastercard"}
                         ]
                     },
                     {
-                        "title": "中概股",
+                        "title": "Services",
                         "symbols": [
+                            {"s": "NASDAQ:TSLA", "d": "Tesla"},
                             {"s": "NYSE:BABA", "d": "Alibaba"},
-                            {"s": "NASDAQ:PDD", "d": "PDD"},
-                            {"s": "NASDAQ:JD", "d": "JD"},
-                            {"s": "NYSE:NIO", "d": "NIO"},
-                            {"s": "NASDAQ:BILI", "d": "Bilibili"}
+                            {"s": "NYSE:WMT", "d": "Walmart"},
+                            {"s": "NYSE:HD", "d": "Home Depot"},
+                            {"s": "NYSE:DIS", "d": "Disney"}
                         ]
                     }
                 ],
@@ -327,7 +297,7 @@ def tradingview_widget(widget_type, symbol="", height=400):
                 "belowLineFillColorGrowing": "rgba(41, 98, 255, 0.12)",
                 "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
                 "symbolActiveColor": "rgba(15, 237, 190, 0.05)",
-                "backgroundColor": "#0d1117"
+                "backgroundColor": "#0a0a0a"
             }'''
         },
         'heatmap': {
@@ -338,56 +308,137 @@ def tradingview_widget(widget_type, symbol="", height=400):
                 "blockColor": "change",
                 "grouping": "sector",
                 "isTransparent": true,
-                "locale": "zh_CN",
+                "locale": "en",
                 "colorTheme": "dark",
                 "hasTopBar": false,
                 "isDataSetEnabled": false,
                 "isZoomEnabled": true,
-                "hasSymbolTooltip": true
+                "hasSymbolTooltip": true,
+                "width": "100%",
+                "height": "100%"
             }'''
         },
-        'symbol_info': {
-            'script': 'symbol-info',
-            'config': f'''{"symbol": "{tv_symbol}", "colorTheme": "dark", "isTransparent": true, "locale": "zh_CN"}'''
-        },
-        'advanced_chart': {
-            'script': 'advanced-chart',
-            'config': f'''{"autosize": true, "symbol": "{tv_symbol}", "interval": "D", "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "zh_CN", "enable_publishing": false, "allow_symbol_change": false, "calendar": false, "support_host": "https://www.tradingview.com"}'''
-        },
-        'technical': {
-            'script': 'technical-analysis',
-            'config': f'''{"interval": "1h", "width": "100%", "isTransparent": true, "height": "{height}", "symbol": "{tv_symbol}", "showIntervalTabs": true, "locale": "zh_CN", "colorTheme": "dark"}'''
-        },
-        'company_profile': {
-            'script': 'company-profile',
-            'config': f'''{"width": "100%", "height": "{height}", "symbol": "{tv_symbol}", "isTransparent": true, "locale": "zh_CN", "colorTheme": "dark"}'''
-        },
-        'financials': {
-            'script': 'financials',
-            'config': f'''{"width": "100%", "height": "{height}", "symbol": "{tv_symbol}", "isTransparent": true, "locale": "zh_CN", "colorTheme": "dark", "displayMode": "regular"}'''
+        'market_quotes': {
+            'script': 'market-quotes',
+            'config': '''{
+                "title": "Stocks",
+                "width": "100%",
+                "locale": "en",
+                "showSymbolLogo": true,
+                "colorTheme": "dark",
+                "isTransparent": true,
+                "symbolsGroups": [
+                    {
+                        "name": "Technology",
+                        "symbols": [
+                            {"name": "NASDAQ:AAPL", "displayName": "Apple"},
+                            {"name": "NASDAQ:MSFT", "displayName": "Microsoft"},
+                            {"name": "NASDAQ:GOOGL", "displayName": "Alphabet"},
+                            {"name": "NASDAQ:NVDA", "displayName": "NVIDIA"},
+                            {"name": "NASDAQ:META", "displayName": "Meta"}
+                        ]
+                    },
+                    {
+                        "name": "Financial",
+                        "symbols": [
+                            {"name": "NYSE:JPM", "displayName": "JPMorgan"},
+                            {"name": "NYSE:BAC", "displayName": "Bank of America"},
+                            {"name": "NYSE:V", "displayName": "Visa"},
+                            {"name": "NYSE:MA", "displayName": "Mastercard"}
+                        ]
+                    }
+                ]
+            }'''
         },
         'timeline': {
             'script': 'timeline',
             'config': '''{
-                "feedMode": "market",
-                "market": "stock",
-                "isTransparent": true,
                 "displayMode": "regular",
-                "width": "100%",
-                "height": "400",
-                "locale": "zh_CN",
-                "colorTheme": "dark"
+                "feedMode": "market",
+                "colorTheme": "dark",
+                "isTransparent": true,
+                "locale": "en",
+                "market": "stock"
             }'''
+        },
+        'symbol_info': {
+            'script': 'symbol-info',
+            'config': f'{{"symbol": "{tv_symbol}", "colorTheme": "dark", "isTransparent": true, "locale": "en"}}'
+        },
+        'advanced_chart': {
+            'script': 'advanced-chart',
+            'config': f'''{{
+                "autosize": true,
+                "symbol": "{tv_symbol}",
+                "interval": "D",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "enable_publishing": false,
+                "allow_symbol_change": false,
+                "calendar": false,
+                "support_host": "https://www.tradingview.com"
+            }}'''
+        },
+        'baseline': {
+            'script': 'advanced-chart',
+            'config': f'''{{
+                "autosize": true,
+                "symbol": "{tv_symbol}",
+                "interval": "D",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "10",
+                "locale": "en",
+                "enable_publishing": false,
+                "allow_symbol_change": false
+            }}'''
+        },
+        'technical': {
+            'script': 'technical-analysis',
+            'config': f'''{{
+                "interval": "1h",
+                "width": "100%",
+                "isTransparent": true,
+                "height": "100%",
+                "symbol": "{tv_symbol}",
+                "showIntervalTabs": true,
+                "locale": "en",
+                "colorTheme": "dark"
+            }}'''
+        },
+        'company_profile': {
+            'script': 'company-profile',
+            'config': f'''{{
+                "width": "100%",
+                "height": "100%",
+                "symbol": "{tv_symbol}",
+                "isTransparent": true,
+                "locale": "en",
+                "colorTheme": "dark"
+            }}'''
+        },
+        'financials': {
+            'script': 'financials',
+            'config': f'''{{
+                "width": "100%",
+                "height": "100%",
+                "symbol": "{tv_symbol}",
+                "isTransparent": true,
+                "locale": "en",
+                "colorTheme": "dark",
+                "displayMode": "regular"
+            }}'''
         }
     }
     
-    if widget_type not in widgets:
+    if widget_type not in configs:
         return
     
-    widget = widgets[widget_type]
-    
+    widget = configs[widget_type]
     html_code = f'''
-    <div class="tradingview-container">
+    <div class="tv-container">
     <div class="tradingview-widget-container">
     <div class="tradingview-widget-container__widget"></div>
     <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-{widget['script']}.js" async>
@@ -396,89 +447,150 @@ def tradingview_widget(widget_type, symbol="", height=400):
     </div>
     </div>
     '''
+    st.components.v1.html(html_code, height=height)
+
+def tradingview_watchlist(symbols, height=550):
+    """关注列表专用 TradingView 组件"""
+    symbol_list = []
+    for sym in symbols:
+        tv_sym = format_symbol_for_tv(sym)
+        symbol_list.append(f'{{"name": "{tv_sym}", "displayName": "{sym}"}}')
     
+    symbols_json = ','.join(symbol_list)
+    
+    html_code = f'''
+    <div class="tv-container">
+    <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
+    {{
+        "width": "100%",
+        "height": "{height}",
+        "symbolsGroups": [
+            {{
+                "name": "My Watchlist",
+                "symbols": [{symbols_json}]
+            }}
+        ],
+        "showSymbolLogo": true,
+        "isTransparent": true,
+        "colorTheme": "dark",
+        "locale": "en"
+    }}
+    </script>
+    </div>
+    </div>
+    '''
     st.components.v1.html(html_code, height=height)
 
 # ========== 侧边栏 ==========
 with st.sidebar:
-    st.markdown('<p class="sidebar-header">🔍 股票搜索</p>', unsafe_allow_html=True)
+    # Logo/标题
+    st.markdown('<div style="text-align: center; padding: 1rem 0;">', unsafe_allow_html=True)
+    st.markdown('<span style="font-size: 1.5rem; font-weight: 800; color: #00d4aa;">📈 OpenStock</span>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    search_query = st.text_input("", placeholder="输入代码或名称...", key="search_input")
+    # 导航
+    st.markdown('<div class="sidebar-header">Navigation</div>', unsafe_allow_html=True)
+    
+    nav_items = {
+        'overview': '📊 Dashboard',
+        'heatmap': '🔥 Heatmap', 
+        'watchlist': '📋 Watchlist',
+        'news': '📰 News'
+    }
+    
+    for key, label in nav_items.items():
+        if st.button(label, use_container_width=True, key=f"nav_{key}"):
+            st.session_state.market_tab = key
+            st.rerun()
+    
+    # 搜索
+    st.markdown('<div class="sidebar-header">Search</div>', unsafe_allow_html=True)
+    search_query = st.text_input("", placeholder="Search stocks...", label_visibility="collapsed")
     
     if search_query:
         results = search_stocks(search_query)
         if results:
-            st.markdown("**搜索结果：**")
-            for stock in results:
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.write(f"**{stock['symbol']}**  
-{stock.get('description', '')[:20]}...")
-                with col2:
+            st.markdown("**Results:**")
+            for stock in results[:5]:
+                cols = st.columns([3, 1])
+                with cols[0]:
+                    desc = stock.get('description', '')[:25]
+                    st.write(f"**{stock['symbol']}** - {desc}")
+                with cols[1]:
                     if st.button("➕", key=f"add_{stock['symbol']}"):
                         if stock['symbol'] not in st.session_state.watchlist:
                             st.session_state.watchlist.append(stock['symbol'])
-                            st.success(f"已添加 {stock['symbol']}")
+                            st.success(f"Added {stock['symbol']}")
                             st.rerun()
     
-    st.markdown("---")
-    st.markdown('<p class="sidebar-header">📋 我的关注</p>', unsafe_allow_html=True)
+    # 关注列表
+    st.markdown('<div class="sidebar-header">Watchlist</div>', unsafe_allow_html=True)
     
-    for symbol in st.session_state.watchlist[:]:
+    # 排序按钮
+    sort_cols = st.columns(3)
+    with sort_cols[0]:
+        if st.button("Sort", key="sort_btn"):
+            order = st.session_state.sort_order
+            if order is None:
+                st.session_state.sort_order = 'asc'
+            elif order == 'asc':
+                st.session_state.sort_order = 'desc'
+            else:
+                st.session_state.sort_order = None
+            st.rerun()
+    
+    current_order = st.session_state.sort_order
+    sort_label = "A-Z" if current_order == 'asc' else "Z-A" if current_order == 'desc' else "Default"
+    st.caption(f"Sorted: {sort_label}")
+    
+    # 排序后的列表
+    watchlist = st.session_state.watchlist.copy()
+    if current_order == 'asc':
+        watchlist.sort()
+    elif current_order == 'desc':
+        watchlist.sort(reverse=True)
+    
+    for symbol in watchlist:
         quote = get_stock_quote(symbol)
         change = quote.get('dp', 0) if quote else 0
         color = "🟢" if change >= 0 else "🔴"
+        price = quote.get('c', 0) if quote else 0
         
-        cols = st.columns([4, 1, 1])
+        cols = st.columns([4, 2, 1])
         with cols[0]:
-            if st.button(f"{color} {symbol}", key=f"select_{symbol}"):
+            if st.button(f"{color} {symbol}", key=f"sel_{symbol}", use_container_width=True):
                 st.session_state.selected_symbol = symbol
+                st.session_state.market_tab = 'stock_detail'
                 st.rerun()
         with cols[1]:
-            if quote:
-                st.caption(f"{quote.get('c', 0):.2f}")
+            st.caption(f"${price:.2f}")
         with cols[2]:
             if st.button("🗑️", key=f"del_{symbol}"):
                 st.session_state.watchlist.remove(symbol)
                 st.rerun()
-    
-    st.markdown("---")
-    st.markdown('<p class="sidebar-header">⚡ 快速导航</p>', unsafe_allow_html=True)
-    
-    if st.button("📊 市场概览", use_container_width=True):
-        st.session_state.market_tab = 'overview'
-        st.rerun()
-    if st.button("🔥 热力图", use_container_width=True):
-        st.session_state.market_tab = 'heatmap'
-        st.rerun()
-    if st.button("📰 市场新闻", use_container_width=True):
-        st.session_state.market_tab = 'news'
-        st.rerun()
 
-# ========== 主内容 ==========
-st.markdown('<p class="main-title">📈 OpenStock</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">开源股票追踪平台 | 实时数据 · 专业图表 · 智能分析</p>', unsafe_allow_html=True)
+# ========== 主内容区 ==========
+st.markdown('<p class="main-title">OpenStock</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Open-source stock tracking platform — free forever</p>', unsafe_allow_html=True)
 
 # API Key 检查
 if not FINNHUB_API_KEY:
-    st.warning("⚠️ 请在 Streamlit Secrets 中设置 FINNHUB_API_KEY")
-    with st.expander("🔧 配置指南"):
+    st.warning("⚠️ Please set FINNHUB_API_KEY in Streamlit Secrets")
+    with st.expander("Setup Guide"):
         st.markdown("""
-        **设置步骤：**
-        1. 访问 [Finnhub](https://finnhub.io) 注册免费账号
-        2. 获取 API Key
-        3. 在 Streamlit Cloud → Settings → Secrets 中添加：
-        ```toml
-        FINNHUB_API_KEY = "your_api_key_here"
-        ```
+        1. Get free API key at [Finnhub](https://finnhub.io)
+        2. Go to Streamlit Cloud → Settings → Secrets
+        3. Add: `FINNHUB_API_KEY = "your_key"`
         """)
 
-# 市场标签页
-tab = st.session_state.get('market_tab', 'overview')
+tab = st.session_state.market_tab
 
+# ========== Dashboard / Overview ==========
 if tab == 'overview':
-    # 市场概览
-    st.markdown("### 📊 全球市场指数")
+    # 市场指数
+    st.markdown("### 📊 Market Overview")
     indices = get_market_indices()
     
     if indices:
@@ -488,8 +600,8 @@ if tab == 'overview':
                 current = data.get('c', 0)
                 change = data.get('d', 0)
                 change_pct = data.get('dp', 0)
-                
                 delta_color = "normal" if change >= 0 else "inverse"
+                
                 st.metric(
                     label=f"**{name}**",
                     value=f"{current:,.2f}",
@@ -499,57 +611,136 @@ if tab == 'overview':
     
     st.markdown("---")
     
-    # TradingView 市场概览
-    col1, col2 = st.columns([2, 3])
+    # 双栏布局 - Market Overview + Timeline
+    col1, col2 = st.columns([3, 2])
+    
     with col1:
-        st.markdown("### 📈 行业走势")
-        tradingview_widget('overview', height=500)
+        st.markdown("### 📈 Markets")
+        tradingview_widget('market_overview', height=500)
+    
     with col2:
-        st.markdown("### 📰 市场动态")
+        st.markdown("### 📰 Market News")
         tradingview_widget('timeline', height=500)
+    
+    st.markdown("---")
+    
+    # 行情数据表格
+    st.markdown("### 📋 Market Quotes")
+    tradingview_widget('market_quotes', height=400)
 
+# ========== Heatmap ==========
 elif tab == 'heatmap':
-    st.markdown("### 🔥 标普500 热力图")
+    st.markdown("### 🔥 Stock Heatmap (S&P 500)")
     tradingview_widget('heatmap', height=800)
 
+# ========== Watchlist ==========
+elif tab == 'watchlist':
+    st.markdown("### 📋 My Watchlist")
+    
+    if st.session_state.watchlist:
+        # 添加股票按钮
+        cols = st.columns([1, 4])
+        with cols[0]:
+            st.markdown(f"**{len(st.session_state.watchlist)}** stocks")
+        
+        st.markdown("---")
+        
+        # TradingView 关注列表
+        tradingview_watchlist(st.session_state.watchlist, height=550)
+        
+        st.markdown("---")
+        
+        # 关注列表详情表格
+        st.markdown("### 📊 Watchlist Details")
+        watchlist_data = []
+        for sym in st.session_state.watchlist:
+            quote = get_stock_quote(sym)
+            profile = get_company_profile(sym)
+            financials = get_basic_financials(sym)
+            
+            if quote:
+                row = {
+                    'Symbol': sym,
+                    'Name': profile.get('name', sym) if profile else sym,
+                    'Price': f"${quote.get('c', 0):.2f}",
+                    'Change': f"{quote.get('d', 0):+.2f}",
+                    'Change %': f"{quote.get('dp', 0):+.2f}%",
+                    'High': f"${quote.get('h', 0):.2f}",
+                    'Low': f"${quote.get('l', 0):.2f}",
+                }
+                
+                if financials and 'metric' in financials:
+                    metrics = financials['metric']
+                    pe = metrics.get('peBasicExclExtraTTM')
+                    row['P/E'] = f"{pe:.2f}" if pe else "N/A"
+                    
+                    market_cap = metrics.get('marketCapitalization')
+                    if isinstance(market_cap, (int, float)):
+                        row['Market Cap'] = f"${market_cap/1000:.2f}B" if market_cap >= 1000 else f"${market_cap:.0f}M"
+                    else:
+                        row['Market Cap'] = "N/A"
+                
+                watchlist_data.append(row)
+        
+        if watchlist_data:
+            df = pd.DataFrame(watchlist_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("Your watchlist is empty. Search and add stocks from the sidebar.")
+
+# ========== News ==========
 elif tab == 'news':
-    st.markdown("### 📰 市场新闻")
+    st.markdown("### 📰 Market News")
     news = get_market_news()
     
     if news:
         for item in news[:20]:
-            with st.expander(f"📰 {item.get('headline', '无标题')}"):
-                st.write(item.get('summary', '暂无摘要'))
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    if item.get('url'):
-                        st.write(f"[阅读全文]({item['url']})")
-                with col2:
-                    st.caption(f"📌 {item.get('source', '未知')} | {datetime.fromtimestamp(item.get('datetime', 0)).strftime('%Y-%m-%d %H:%M')}")
+            with st.expander(f"📰 {item.get('headline', 'No Title')}"):
+                st.write(item.get('summary', 'No summary available.'))
+                if item.get('url'):
+                    st.write(f"[Read more]({item['url']})")
+                st.caption(f"📌 {item.get('source', 'Unknown')} | {datetime.fromtimestamp(item.get('datetime', 0)).strftime('%Y-%m-%d %H:%M')}")
     else:
-        st.info("暂无新闻数据")
+        st.info("No news available at the moment.")
 
-# ========== 股票详情页 ==========
-symbol = st.session_state.get('selected_symbol', 'AAPL')
-
-if symbol:
-    st.markdown("---")
-    st.markdown(f"## 📌 {symbol} 详细分析")
+# ========== Stock Detail ==========
+elif tab == 'stock_detail':
+    symbol = st.session_state.get('selected_symbol', 'AAPL')
     
     # 获取数据
     quote = get_stock_quote(symbol)
     profile = get_company_profile(symbol)
     financials = get_basic_financials(symbol)
     
-    # 顶部信息栏
-    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
-    
+    # 标题栏
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         if profile:
             st.markdown(f"### {profile.get('name', symbol)}")
             st.caption(f"{profile.get('finnhubIndustry', 'N/A')} | {profile.get('exchange', 'N/A')}")
+        else:
+            st.markdown(f"### {symbol}")
     
     with col2:
+        if symbol not in st.session_state.watchlist:
+            if st.button("➕ Add to Watchlist", use_container_width=True):
+                st.session_state.watchlist.append(symbol)
+                st.success(f"Added {symbol}")
+                st.rerun()
+        else:
+            st.button("✅ In Watchlist", disabled=True, use_container_width=True)
+    
+    with col3:
+        if st.button("🔙 Back", use_container_width=True):
+            st.session_state.market_tab = 'overview'
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # 价格和关键指标
+    cols = st.columns([2, 1, 1, 1, 1])
+    
+    with cols[0]:
         if quote:
             price = quote.get('c', 0)
             change = quote.get('d', 0)
@@ -558,145 +749,93 @@ if symbol:
             arrow = "▲" if change >= 0 else "▼"
             
             st.markdown(f"""
-            <div class="price-container">
+            <div style="text-align: center;">
                 <div class="price-large">${price:.2f}</div>
                 <div class="{color_class}">{arrow} {abs(change):.2f} ({change_pct:+.2f}%)</div>
             </div>
             """, unsafe_allow_html=True)
     
-    with col3:
+    with cols[1]:
         if quote:
-            st.metric("最高", f"${quote.get('h', 0):.2f}")
-            st.metric("最低", f"${quote.get('l', 0):.2f}")
+            st.metric("Open", f"${quote.get('o', 0):.2f}")
+            st.metric("Prev Close", f"${quote.get('pc', 0):.2f}")
     
-    with col4:
+    with cols[2]:
         if quote:
-            st.metric("开盘", f"${quote.get('o', 0):.2f}")
-            st.metric("昨收", f"${quote.get('pc', 0):.2f}")
+            st.metric("High", f"${quote.get('h', 0):.2f}")
+            st.metric("Low", f"${quote.get('l', 0):.2f}")
     
-    with col5:
+    with cols[3]:
         if financials and 'metric' in financials:
             metrics = financials['metric']
-            pe = metrics.get('peBasicExclExtraTTM', 'N/A')
-            market_cap = metrics.get('marketCapitalization', 'N/A')
+            pe = metrics.get('peBasicExclExtraTTM')
+            market_cap = metrics.get('marketCapitalization')
+            st.metric("P/E Ratio", f"{pe:.2f}" if pe else "N/A")
             if isinstance(market_cap, (int, float)):
-                market_cap = f"${market_cap:,.0f}M"
-            st.metric("市盈率", pe if pe else "N/A")
-            st.metric("市值", market_cap)
+                cap_str = f"${market_cap/1000:.2f}B" if market_cap >= 1000 else f"${market_cap:.0f}M"
+                st.metric("Market Cap", cap_str)
     
-    # 操作按钮
-    cols = st.columns([1, 1, 1, 4])
-    with cols[0]:
-        if symbol not in st.session_state.watchlist:
-            if st.button("➕ 加入关注", use_container_width=True):
-                st.session_state.watchlist.append(symbol)
-                st.success(f"已添加 {symbol} 到关注列表")
-                st.rerun()
-        else:
-            st.button("✅ 已关注", disabled=True, use_container_width=True)
+    with cols[4]:
+        if profile:
+            st.metric("Employees", f"{profile.get('employeeTotal', 0):,}" if profile.get('employeeTotal') else "N/A")
+            st.metric("IPO Date", profile.get('ipo', 'N/A'))
     
-    with cols[1]:
-        st.selectbox("图表类型", ["K线图", "基线图"], key="chart_type_select")
-    
-    # TradingView 图表
     st.markdown("---")
     
-    col_chart, col_info = st.columns([3, 2])
+    # 图表区域 - 左：主图，右：技术分析
+    col_chart, col_tech = st.columns([3, 2])
     
     with col_chart:
-        st.markdown("### 📊 技术分析")
-        tradingview_widget('advanced_chart', symbol, height=500)
+        st.markdown("### 📊 Chart")
+        chart_type = st.selectbox("Chart Type", ["Candlestick", "Baseline"], label_visibility="collapsed")
+        
+        if chart_type == "Candlestick":
+            tradingview_widget('advanced_chart', symbol, height=500)
+        else:
+            tradingview_widget('baseline', symbol, height=500)
     
-    with col_info:
-        st.markdown("### 📋 技术指标")
+    with col_tech:
+        st.markdown("### 📈 Technical Analysis")
         tradingview_widget('technical', symbol, height=250)
         
-        st.markdown("### 🏢 公司简介")
+        st.markdown("### 🏢 Company Profile")
         if profile:
-            st.write(f"**行业:** {profile.get('finnhubIndustry', 'N/A')}")
-            st.write(f"**国家:** {profile.get('country', 'N/A')}")
-            st.write(f"**货币:** {profile.get('currency', 'N/A')}")
-            st.write(f"**IPO日期:** {profile.get('ipo', 'N/A')}")
-            st.write(f"**员工:** {profile.get('employeeTotal', 'N/A'):,}" if profile.get('employeeTotal') else "**员工:** N/A")
+            st.write(f"**Industry:** {profile.get('finnhubIndustry', 'N/A')}")
+            st.write(f"**Sector:** {profile.get('sector', 'N/A')}")
+            st.write(f"**Country:** {profile.get('country', 'N/A')}")
+            st.write(f"**Currency:** {profile.get('currency', 'N/A')}")
             if profile.get('weburl'):
-                st.write(f"**官网:** [{profile['weburl']}]({profile['weburl']})")
+                st.write(f"**Website:** [{profile['weburl']}]({profile['weburl']})")
             if profile.get('phone'):
-                st.write(f"**电话:** {profile['phone']}")
+                st.write(f"**Phone:** {profile['phone']}")
+    
+    st.markdown("---")
     
     # 财务数据
-    st.markdown("---")
-    st.markdown("### 💰 财务数据")
+    st.markdown("### 💰 Financials")
     tradingview_widget('financials', symbol, height=500)
     
-    # 公司新闻
     st.markdown("---")
-    st.markdown(f"### 📰 {symbol} 相关新闻")
+    
+    # 公司新闻
+    st.markdown(f"### 📰 {symbol} News")
     company_news = get_company_news(symbol)
     
     if company_news:
         for item in company_news[:10]:
-            with st.expander(f"📰 {item.get('headline', '无标题')}"):
-                st.write(item.get('summary', '暂无摘要'))
+            with st.expander(f"📰 {item.get('headline', 'No Title')}"):
+                st.write(item.get('summary', 'No summary available.'))
                 if item.get('url'):
-                    st.write(f"[阅读全文]({item['url']})")
-                st.caption(f"📌 {item.get('source', '未知')} | {datetime.fromtimestamp(item.get('datetime', 0)).strftime('%Y-%m-%d %H:%M')}")
+                    st.write(f"[Read more]({item['url']})")
+                st.caption(f"📌 {item.get('source', 'Unknown')} | {datetime.fromtimestamp(item.get('datetime', 0)).strftime('%Y-%m-%d %H:%M')}")
     else:
-        st.info("暂无相关新闻")
-
-# ========== 关注列表表格 ==========
-st.markdown("---")
-st.markdown("### 📋 关注列表概览")
-
-if st.session_state.watchlist:
-    watchlist_data = []
-    for sym in st.session_state.watchlist:
-        quote = get_stock_quote(sym)
-        profile = get_company_profile(sym)
-        financials = get_basic_financials(sym)
-        
-        if quote:
-            row = {
-                '代码': sym,
-                '名称': profile.get('name', sym) if profile else sym,
-                '现价': f"${quote.get('c', 0):.2f}",
-                '涨跌': f"{quote.get('d', 0):+.2f}",
-                '涨跌幅%': f"{quote.get('dp', 0):+.2f}%",
-                '最高': f"${quote.get('h', 0):.2f}",
-                '最低': f"${quote.get('l', 0):.2f}",
-            }
-            
-            if financials and 'metric' in financials:
-                metrics = financials['metric']
-                pe = metrics.get('peBasicExclExtraTTM')
-                row['市盈率'] = f"{pe:.2f}" if pe else "N/A"
-                
-                market_cap = metrics.get('marketCapitalization')
-                if isinstance(market_cap, (int, float)):
-                    row['市值'] = f"${market_cap/1000:.2f}B" if market_cap >= 1000 else f"${market_cap:.0f}M"
-                else:
-                    row['市值'] = "N/A"
-            
-            watchlist_data.append(row)
-    
-    if watchlist_data:
-        df = pd.DataFrame(watchlist_data)
-        
-        # 使用 st.dataframe 并设置样式
-        def color_change(val):
-            if isinstance(val, str):
-                if '+' in val:
-                    return 'color: #3fb950'
-                elif '-' in val and val != '-':
-                    return 'color: #f85149'
-            return ''
-        
-        styled_df = df.style.map(color_change, subset=['涨跌', '涨跌幅%'])
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        st.info("No recent news for this stock.")
 
 # ========== 页脚 ==========
 st.markdown("---")
 st.caption("""
-🚀 **OpenStock** - 开源股票追踪平台 | Built with Streamlit + TradingView + Finnhub
+🚀 **OpenStock** — Built openly, for everyone, forever free.
 
-数据仅供参考，不构成投资建议。投资有风险，入市需谨慎。
+Data provided by [Finnhub](https://finnhub.io) and [TradingView](https://tradingview.com).
+Not financial advice. Market data may be delayed.
 """)
